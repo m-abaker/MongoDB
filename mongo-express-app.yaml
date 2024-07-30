@@ -1,0 +1,60 @@
+### mongodb-cm.yaml ###
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mongodb-cm
+data:
+  database_url: mongodb-svc
+---
+### mongo-express-app.yaml ###
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongo-express-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongo-express
+  template:
+    metadata:
+      labels:
+        app: mongo-express
+    spec:
+      containers:
+      - name: mongo-express
+        image: mongo-express
+        ports:
+          - containerPort: 8081
+        env:
+          - name: ME_CONFIG_MONGODB_ADMINUSERNAME
+            valueFrom:
+              secretKeyRef:
+                name: mongodb-pass
+                key: username
+          - name: ME_CONFIG_MONGODB_ADMINPASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: mongodb-pass
+                key: password
+          - name: ME_CONFIG_MONGODB_SERVER
+            valueFrom:
+              configMapKeyRef:
+                name: mongodb-cm
+                key: database_url
+---
+### mongo-express-svc.yaml ###
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo-express-svc
+spec:
+  selector:
+    app: mongo-express
+  type: LoadBalancer 
+  ports:
+    - protocol: TCP
+      port: 8081
+      targetPort: 8081
+      nodePort: 31000
+---      
